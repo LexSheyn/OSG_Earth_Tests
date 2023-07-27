@@ -1,0 +1,17 @@
+float m_previousDistanceFromViewPoint;
+float m_currentDistanceFromViewPoint;
+float m_scale;
+
+...
+const float ratio = m_currentDistanceFromViewPoint / m_previousDistanceFromViewPoint;
+...
+if (ratio < 1.0f)
+{
+    scale -= 1.0f - ratio;
+}
+else if (ratio > 1.0f)
+{
+    scale += ratio - 1.0f;
+}
+
+// Set scale here.

@@ -4,10 +4,10 @@ project(project_0 VERSION 0.01 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 
-file(GLOB_RECURSE HEADERS "include/*.h")
+file(GLOB_RECURSE HEADERS "include/*.hpp")
 file(GLOB_RECURSE SOURCES "source/*.cpp")
 
-add_executable(${PROJECT_NAME} source/main.cpp)
+add_executable(${PROJECT_NAME} ${SOURCES})
 
 # Hardcoded include directories!
 target_include_directories(${PROJECT_NAME} PRIVATE usr/local/include)

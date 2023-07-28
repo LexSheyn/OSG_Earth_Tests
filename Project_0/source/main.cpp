@@ -1,3 +1,7 @@
+#include "AutoScalePositionAttitudeTransformCullCallback.hpp"
+
+#include <osg/PositionAttitudeTransform>
+
 #include <osg/ShapeDrawable>
 #include <osg/MatrixTransform>
 #include <osg/PolygonMode>
@@ -116,22 +120,25 @@ osg::Node* createModel_osgEarth(const ModelCreateInfo_osgEarth& createInfo)
         model = osgDB::readNodeFile(createInfo.filePath);
     }
 
-    // TEST:
-    osg::MatrixTransform* matrixTransform = new osg::MatrixTransform();
+    test::AutoScalePositionAttitudeTransformCullCallback* cullCallback = new test::AutoScalePositionAttitudeTransformCullCallback();
 
-    matrixTransform->setMatrix(osg::Matrix::scale(50'000.0f, 50'000.0f, 50'000.0f));
+    cullCallback->setScale(osg::Vec3(1.0f, 1.0f, 1.0f));
+    cullCallback->setMinScaleFactor(5000.0f);
+    cullCallback->setMaxScaleFactor(100000.0f);
 
-    matrixTransform->addChild(model);
-    //
+    osg::PositionAttitudeTransform* positionAttitudeTransform = new osg::PositionAttitudeTransform();
 
-    osgEarth::GeoTransform* modelTransform = new osgEarth::GeoTransform();
+    positionAttitudeTransform->setCullCallback(cullCallback);
 
-    modelTransform->setPosition(createInfo.geoPoint);
+    positionAttitudeTransform->addChild(model);
 
-    //modelTransform->addChild(model);
-    modelTransform->addChild(matrixTransform);
+    osgEarth::GeoTransform* geoTransform = new osgEarth::GeoTransform();
 
-    return modelTransform;
+    geoTransform->setPosition(createInfo.geoPoint);
+
+    geoTransform->addChild(positionAttitudeTransform);
+
+    return geoTransform;
 }
 
 #define LC "[viewer] "
@@ -198,12 +205,41 @@ main(int argc, char** argv)
     ModelCreateInfo_osgEarth modelCreateInfo;
 
     modelCreateInfo.geoPoint        = osgEarth::GeoPoint(mapNode->getMapSRS(), 45, 135, 500'000, osgEarth::ALTMODE_RELATIVE);
-    modelCreateInfo.filePath        = "/home/user/Models/Blender/boeng_777_centered_xyz.osg";
+    modelCreateInfo.filePath        = "/home/user/Models/Blender/boeng_777_centered_osgEarth.osg";
     modelCreateInfo.b_multithreaded = true;
 
     osg::Node* model = createModel_osgEarth(modelCreateInfo);
 
     mapNode->addChild(model);
+
+    class Callback : public osg::NodeCallback
+    {
+    public:
+
+        virtual void operator()(osg::Node* node, osg::NodeVisitor* nodeVisitor) override
+        {
+            auto bound = node->getBound();
+
+            auto center = bound.center();
+
+            std::cout << std::fixed << "Callback::operator(): center x: " << center.x() << std::endl;
+            std::cout << std::fixed << "Callback::operator(): center y: " << center.y() << std::endl;
+            std::cout << std::fixed << "Callback::operator(): center z: " << center.z() << std::endl;
+
+            auto distanceToViewPoint = nodeVisitor->getDistanceToViewPoint(center, true);
+
+            std::cout << std::fixed << "Callback::operator(): distanceToViewPoint: " << distanceToViewPoint << std::endl;
+        
+            osg::NodeCallback::operator()(node, nodeVisitor);
+        }
+    };
+
+    Callback* callback = new Callback();
+
+    //positionAttitudeTransform->addCullCallback(callback);
+    //positionAttitudeTransform->setCullingActive(false);
+
+    //mapNode->addChild(model);
 
     if (node)
     {

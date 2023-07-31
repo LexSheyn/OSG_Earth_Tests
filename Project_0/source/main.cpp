@@ -1,262 +1,64 @@
-#include "AutoScalePositionAttitudeTransformCullCallback.hpp"
-
-#include <osg/PositionAttitudeTransform>
-
-#include <osg/ShapeDrawable>
-#include <osg/MatrixTransform>
-#include <osg/PolygonMode>
-#include <osg/ProxyNode>
 #include <osgViewer/Viewer>
 #include <osgDB/ReadFile>
-#include <osgGA/TrackballManipulator>
-#include <osgUtil/Optimizer>
+#include <osgGA/GUIEventHandler>
 
-#include <osgEarth/Notify>
-#include <osgEarth/EarthManipulator>
-#include <osgEarth/ExampleResources>
 #include <osgEarth/MapNode>
-#include <osgEarth/Threading>
-#include <osgEarth/ShaderGenerator>
-#include <osgEarth/Metrics>
-
+#include <osgEarth/EarthManipulator>
 #include <osgEarth/GeoTransform>
 
 #include <iostream>
+#include <cstdint>
 
-osg::Node* createBoundingBox(float radius)
+// TO DO
+
+int32_t main(int32_t argc, char** argv)
 {
-    osg::Box* box = new osg::Box(osg::Vec3(), 1.0f);
+    osg::Node* node0 = osgDB::readNodeFile("/home/user/Downloads/HYP_50M_SR_W/planet.earth");
+    osg::Node* node1 = osgDB::readNodeFile("/home/user/Downloads/GRAY_50M_SR_OB/planet.earth");
 
-    osg::ShapeDrawable* boxDrawable = new osg::ShapeDrawable(box);
+    osgEarth::initialize();
 
-    osg::Geode* geode = new osg::Geode();
+    osgEarth::EarthManipulator* earthManipulator = new osgEarth::EarthManipulator();
 
-    geode->addDrawable(boxDrawable);
+    osgEarth::MapNode* mapNode0 = osgEarth::MapNode::get(node0);
 
-    osg::MatrixTransform* boxTransform = new osg::MatrixTransform();
-
-    boxTransform->addChild(geode);
-
-    osg::PolygonMode* boxPolygonMode = new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
-
-    osg::StateSet* boxStateSet = boxTransform->getOrCreateStateSet();
-
-    boxStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    boxStateSet->setAttributeAndModes(boxPolygonMode);
-
-    const osg::Matrix scale = osg::Matrix::scale(radius, radius, radius);
-
-    const osg::Matrix boxMatrix = boxTransform->getMatrix();
-
-    const osg::Matrix newBoxMatrix = scale * boxMatrix;
-
-    boxTransform->setMatrix(newBoxMatrix);
-
-    return boxTransform;
-}
-
-struct ModelCreateInfo_osg
-{
-    osg::Vec3      translation;
-    osg::Quat      rotation;
-    osg::Vec3      scale;
-    std::string    filePath;
-    bool           b_multithreaded;
-};
-
-osg::Node* createModel_osg(const ModelCreateInfo_osg& createInfo)
-{
-    osg::Node* model = nullptr;
-    
-    if (createInfo.b_multithreaded)
-    {
-        osg::ProxyNode* proxyNode = new osg::ProxyNode();
-
-        proxyNode->setFileName(0, createInfo.filePath);
-
-        model = proxyNode;
-    }
-    else
-    {
-        model = osgDB::readNodeFile(createInfo.filePath);
-    }
-
-    osg::MatrixTransform* modelTransform = new osg::MatrixTransform();
-
-    const osg::Matrix modelTranslation = osg::Matrix::translate(createInfo.translation);
-    const osg::Matrix modelRotation    = osg::Matrix::rotate(createInfo.rotation);
-    const osg::Matrix modelScale       = osg::Matrix::scale(createInfo.scale);
-
-    const osg::Matrix modelMatrix = modelScale * modelRotation * modelTranslation;
-
-    modelTransform->setMatrix(modelMatrix);
-
-    modelTransform->addChild(model);
-
-    return modelTransform;
-}
-
-struct ModelCreateInfo_osgEarth
-{
-    osgEarth::GeoPoint    geoPoint;
-    std::string           filePath;
-    bool                  b_multithreaded;
-};
-
-osg::Node* createModel_osgEarth(const ModelCreateInfo_osgEarth& createInfo)
-{
-    osg::Node* model = nullptr;
-    
-    if (createInfo.b_multithreaded)
-    {
-        osg::ProxyNode* proxyNode = new osg::ProxyNode();
-
-        proxyNode->setFileName(0, createInfo.filePath);
-
-        model = proxyNode;
-    }
-    else
-    {
-        model = osgDB::readNodeFile(createInfo.filePath);
-    }
-
-    test::AutoScalePositionAttitudeTransformCullCallback* cullCallback = new test::AutoScalePositionAttitudeTransformCullCallback();
-
-    cullCallback->setScale(osg::Vec3(1.0f, 1.0f, 1.0f));
-    cullCallback->setMinScaleFactor(5000.0f);
-    cullCallback->setMaxScaleFactor(100000.0f);
-
-    osg::PositionAttitudeTransform* positionAttitudeTransform = new osg::PositionAttitudeTransform();
-
-    positionAttitudeTransform->setCullCallback(cullCallback);
-
-    positionAttitudeTransform->addChild(model);
+    osgEarth::MapNode* mapNode1 = osgEarth::MapNode::get(node1);
 
     osgEarth::GeoTransform* geoTransform = new osgEarth::GeoTransform();
 
-    geoTransform->setPosition(createInfo.geoPoint);
+    osgEarth::GeoPoint geoPoint(mapNode0->getMapSRS(), 0, 0, 10'000'000, osgEarth::ALTMODE_RELATIVE);
 
-    geoTransform->addChild(positionAttitudeTransform);
+    geoTransform->setPosition(geoPoint);
+    geoTransform->addChild(mapNode1);
 
-    return geoTransform;
-}
+    mapNode0->addChild(geoTransform);
 
-#define LC "[viewer] "
+    osg::Group* root = new osg::Group();
 
-using namespace osgEarth;
-using namespace osgEarth::Util;
+    root->addChild(mapNode0);
 
-int
-usage(const char* name)
-{
-    OE_NOTICE
-        << "\nUsage: " << name << " file.earth" << std::endl
-        << MapNodeHelper().usage() << std::endl;
+    osgViewer::Viewer viewer;
 
-    return 0;
-}
+    viewer.setCameraManipulator(earthManipulator);
 
+    earthManipulator->setNode(mapNode1);
 
-int
-main(int argc, char** argv)
-{
-    osgEarth::initialize();
+    osgEarth::EarthManipulator::Settings* settings = earthManipulator->getSettings();
 
-    osg::ArgumentParser arguments(&argc,argv);
+    settings->setLockAzimuthWhilePanning(false);
+    settings->setScrollSensitivity(1.5);
+    settings->setThrowingEnabled(true);
+    settings->setThrowDecayRate(0.02);
+    settings->setMinMaxDistance(1'000'000.0, 100'000'000.0);
+    settings->setArcViewpointTransitions(true);
+    settings->setAutoViewpointDurationEnabled(true);
+    settings->setAutoViewpointDurationLimits(0.0, 0.5);
 
-    // help?
-    if ( arguments.read("--help") )
-        return usage(argv[0]);
-
-    // create a viewer:
-    osgViewer::Viewer viewer(arguments);
+    root->addEventCallback(new osg::NodeCallback());
 
     viewer.setUpViewInWindow(0, 0, 1920, 1080, 0);
 
-    // This is normally called by Viewer::run but we are running our frame loop manually so we need to call it here.
-    viewer.setReleaseContextAtEndOfFrameHint(false);
+    viewer.setSceneData(root);
 
-    // Tell the database pager to not modify the unref settings
-    viewer.getDatabasePager()->setUnrefImageDataAfterApplyPolicy( true, false );
-
-    // thread-safe initialization of the OSG wrapper manager. Calling this here
-    // prevents the "unsupported wrapper" messages from OSG
-    osgDB::Registry::instance()->getObjectWrapperManager()->findWrapper("osg::Image");
-
-    // install our default manipulator (do this before calling load)
-    viewer.setCameraManipulator( new EarthManipulator(arguments) );
-
-    // disable the small-feature culling
-    viewer.getCamera()->setSmallFeatureCullingPixelSize(-1.0f);
-
-    // load an earth file, and support all or our example command-line options
-    auto node = MapNodeHelper().load(arguments, &viewer);
-
-    osgEarth::MapNode* mapNode = osgEarth::MapNode::get(node);
-
-    osg::BoundingSphere mapBoundingSphere = mapNode->getBound();
-
-    const float mapRadius = mapBoundingSphere.radius();
-
-    osg::Node* mapBoundingBox = createBoundingBox(mapRadius);
-
-    mapNode->addChild(mapBoundingBox);
-
-    ModelCreateInfo_osgEarth modelCreateInfo;
-
-    modelCreateInfo.geoPoint        = osgEarth::GeoPoint(mapNode->getMapSRS(), 45, 135, 500'000, osgEarth::ALTMODE_RELATIVE);
-    modelCreateInfo.filePath        = "/home/user/Models/Blender/boeng_777_centered_osgEarth.osg";
-    modelCreateInfo.b_multithreaded = true;
-
-    osg::Node* model = createModel_osgEarth(modelCreateInfo);
-
-    mapNode->addChild(model);
-
-    class Callback : public osg::NodeCallback
-    {
-    public:
-
-        virtual void operator()(osg::Node* node, osg::NodeVisitor* nodeVisitor) override
-        {
-            auto bound = node->getBound();
-
-            auto center = bound.center();
-
-            std::cout << std::fixed << "Callback::operator(): center x: " << center.x() << std::endl;
-            std::cout << std::fixed << "Callback::operator(): center y: " << center.y() << std::endl;
-            std::cout << std::fixed << "Callback::operator(): center z: " << center.z() << std::endl;
-
-            auto distanceToViewPoint = nodeVisitor->getDistanceToViewPoint(center, true);
-
-            std::cout << std::fixed << "Callback::operator(): distanceToViewPoint: " << distanceToViewPoint << std::endl;
-        
-            osg::NodeCallback::operator()(node, nodeVisitor);
-        }
-    };
-
-    Callback* callback = new Callback();
-
-    //positionAttitudeTransform->addCullCallback(callback);
-    //positionAttitudeTransform->setCullingActive(false);
-
-    //mapNode->addChild(model);
-
-    if (node)
-    {
-        viewer.setSceneData( node );
-        
-        if (!MapNode::get(node))
-        {
-            // not an earth file? Just view as a normal OSG node or image
-            viewer.setCameraManipulator(new osgGA::TrackballManipulator);
-            osgUtil::Optimizer opt;
-            opt.optimize(node, osgUtil::Optimizer::INDEX_MESH);
-            ShaderGenerator gen;
-            node->accept(gen);
-        }
-
-        return Metrics::run(viewer);
-    }
-
-    return usage(argv[0]);
+    return viewer.run();
 }

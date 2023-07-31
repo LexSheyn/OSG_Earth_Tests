@@ -216,7 +216,9 @@
         "instancesymbol": "cpp",
         "modelnode": "cpp",
         "mapnodeobserver": "cpp",
-        "cullingutils": "cpp"
+        "cullingutils": "cpp",
+        "earthmanipulator": "cpp",
+        "guieventadapter": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }

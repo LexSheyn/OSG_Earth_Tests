@@ -225,7 +225,11 @@
         "terraintilemodel": "cpp",
         "viewpoint": "cpp",
         "orbitmanipulator": "cpp",
-        "standardmanipulator": "cpp"
+        "standardmanipulator": "cpp",
+        "guieventhandler": "cpp",
+        "intersectionvisitor": "cpp",
+        "guiactionadapter": "cpp",
+        "keyswitchmatrixmanipulator": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }

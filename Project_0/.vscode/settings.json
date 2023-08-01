@@ -218,7 +218,8 @@
         "mapnodeobserver": "cpp",
         "cullingutils": "cpp",
         "earthmanipulator": "cpp",
-        "guieventadapter": "cpp"
+        "guieventadapter": "cpp",
+        "terrainenginenode": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }

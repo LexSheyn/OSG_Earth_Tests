@@ -219,7 +219,13 @@
         "cullingutils": "cpp",
         "earthmanipulator": "cpp",
         "guieventadapter": "cpp",
-        "terrainenginenode": "cpp"
+        "terrainenginenode": "cpp",
+        "cameramanipulator": "cpp",
+        "nodetrackermanipulator": "cpp",
+        "terraintilemodel": "cpp",
+        "viewpoint": "cpp",
+        "orbitmanipulator": "cpp",
+        "standardmanipulator": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }

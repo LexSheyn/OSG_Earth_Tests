@@ -1,6 +1,7 @@
 #include <osgViewer/Viewer>
 #include <osgDB/ReadFile>
 #include <osgGA/GUIEventHandler>
+#include <osgGA/NodeTrackerManipulator>
 
 #include <osgEarth/MapNode>
 #include <osgEarth/EarthManipulator>
@@ -14,60 +15,26 @@ class ManipulatorController : public osgGA::GUIEventHandler
 public:
 
     ManipulatorController()
-    : m_currentIndex (0)
     {}
 
-    void addTarget(osgEarth::MapNode* target)
+    void setViewer(osgViewer::Viewer* viewer)
     {
-        const osg::observer_ptr<osgEarth::MapNode> targetPointer = target;
-
-        m_targets.push_back(targetPointer);
+        m_viewer = viewer;
     }
 
-    void removeTarget(uint32_t index)
+    void setManipulator0(osgEarth::EarthManipulator* manipulator)
     {
-        m_targets.erase(m_targets.begin() + index);
+        m_manipulator0 = manipulator;
     }
 
-    void setTarget(uint32_t index, osgEarth::MapNode* target)
+    void setManipulator1(osgEarth::EarthManipulator* manipulator)
     {
-        m_targets[index] = target;
-    }
-    
-    const osgEarth::MapNode* getTarget(uint32_t index) const
-    {
-        osg::ref_ptr<osgEarth::MapNode> target;
-
-        if (m_targets[index].lock(target))
-        {
-            return target.get();
-        }
-
-        return nullptr;
+        m_manipulator1 = manipulator;
     }
 
-    bool followTarget(uint32_t index)
+    void setManipulator2(osgGA::NodeTrackerManipulator* manipulator)
     {
-        osg::ref_ptr<osgEarth::MapNode> target;
-
-        if (m_targets[index].lock(target))
-        {
-            osg::ref_ptr<osgEarth::EarthManipulator> manipulator;
-
-            if (m_manipulator.lock(manipulator))
-            {
-                manipulator->setNode(target.get());
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    void setManipulator(osgEarth::EarthManipulator* manipulator)
-    {
-        m_manipulator = manipulator;
+        m_manipulator2 = manipulator;
     }
 
     // osgGA::GUIEventHandler.
@@ -76,52 +43,41 @@ public:
     {
         const osgGA::GUIEventAdapter::EventType eventType = eventAdapter.getEventType();
 
-        if (eventType == osgGA::GUIEventAdapter::KEYDOWN)
+        if (eventType == osgGA::GUIEventAdapter::KEYUP)
         {
             const int32_t key = eventAdapter.getKey();
 
-            if (!m_targets.empty())
+            switch (key)
             {
-                switch (key)
+                case 'q':
+                case 'Q':
                 {
-                    case 'q':
-                    case 'Q':
-                    {
-                        m_currentIndex--;
+                    m_viewer->setCameraManipulator(m_manipulator0.get());
 
-                        if (m_currentIndex < m_targets.size())
-                        {
-                            const bool b_followed = this->followTarget(m_currentIndex);
-                        }
-                        else
-                        {
-                            m_currentIndex++;
-                        }
-
-                        break;
-                    }
-
-                    case 'e':
-                    case 'E':
-                    {
-                        m_currentIndex++;
-
-                        if (m_currentIndex < m_targets.size())
-                        {
-                            const bool b_followed = this->followTarget(m_currentIndex);
-                        }
-                        else
-                        {
-                            m_currentIndex--;
-                        }
-
-                        break;
-                    }
-
-                    default: break;
+                    break;
                 }
+
+                case 'w':
+                case 'W':
+                {
+                    m_viewer->setCameraManipulator(m_manipulator1.get());
+
+                    break;
+                }
+
+                case 'e':
+                case 'E':
+                {
+                    m_viewer->setCameraManipulator(m_manipulator2.get());
+
+                    break;
+                }
+
+                default: break;
             }
         }
+
+        return false;
     }
 
 protected:
@@ -129,53 +85,75 @@ protected:
     virtual ~ManipulatorController() override
     {}
 
-    std::vector<osg::observer_ptr<osgEarth::MapNode>> m_targets;
-    osg::observer_ptr<osgEarth::EarthManipulator>     m_manipulator;
-    uint32_t                                          m_currentIndex;
+    osgViewer::Viewer*                          m_viewer;
+    osg::ref_ptr<osgEarth::EarthManipulator>    m_manipulator0;
+    osg::ref_ptr<osgEarth::EarthManipulator>    m_manipulator1;
+    osg::ref_ptr<osgGA::NodeTrackerManipulator> m_manipulator2;
 };
 
 int32_t main(int32_t argc, char** argv)
 {
     osg::Node* node0 = osgDB::readNodeFile("/home/user/Downloads/HYP_50M_SR_W/planet.earth");
     osg::Node* node1 = osgDB::readNodeFile("/home/user/Downloads/GRAY_50M_SR_OB/planet.earth");
+    osg::Node* node2 = osgDB::readNodeFile("/home/user/Models/cessna.osg");
 
     osgEarth::initialize();
 
-    osgEarth::EarthManipulator* earthManipulator = new osgEarth::EarthManipulator();
-
     osgEarth::MapNode* mapNode0 = osgEarth::MapNode::get(node0);
-
     osgEarth::MapNode* mapNode1 = osgEarth::MapNode::get(node1);
 
-    osgEarth::GeoTransform* geoTransform = new osgEarth::GeoTransform();
+    osg::MatrixTransform* transform0 = new osg::MatrixTransform();
 
-    osgEarth::GeoPoint geoPoint(mapNode0->getMapSRS(), 0, 0, 10'000'000, osgEarth::ALTMODE_RELATIVE);
+    transform0->setMatrix(osg::Matrix::translate(-20000000, 0, 0));
+    transform0->addChild(mapNode0);
 
-    geoTransform->setPosition(geoPoint);
-    geoTransform->addChild(mapNode1);
+    osg::MatrixTransform* transform1 = new osg::MatrixTransform();
 
-    mapNode0->addChild(geoTransform);
+    transform1->setMatrix(osg::Matrix::translate(20000000, 0, 0));
+    transform1->addChild(mapNode1);
+
+    osg::MatrixTransform* transform2 = new osg::MatrixTransform();
+
+    transform2->setMatrix(osg::Matrix::translate(0, 0, 0));
+    transform2->addChild(node2);
 
     osg::Group* root = new osg::Group();
 
-    root->addChild(mapNode0);
+    root->addChild(transform0);
+    root->addChild(transform1);
+    root->addChild(transform2);
+
+    osgEarth::EarthManipulator*    manipulator0 = new osgEarth::EarthManipulator();
+    osgEarth::EarthManipulator*    manipulator1 = new osgEarth::EarthManipulator();
+    osgGA::NodeTrackerManipulator* manipulator2 = new osgGA::NodeTrackerManipulator();
+
+    manipulator0->setNode(mapNode0);
+    manipulator1->setNode(mapNode1);
+    manipulator2->setNode(transform2);
 
     osgViewer::Viewer viewer;
 
-    viewer.setCameraManipulator(earthManipulator);
+    viewer.setCameraManipulator(manipulator0);
 
-    earthManipulator->setNode(mapNode1);
+    ManipulatorController* manipulatorController = new ManipulatorController();
 
-    osgEarth::EarthManipulator::Settings* settings = earthManipulator->getSettings();
+    manipulatorController->setViewer(&viewer);
+    manipulatorController->setManipulator0(manipulator0);
+    manipulatorController->setManipulator1(manipulator1);
+    manipulatorController->setManipulator2(manipulator2);
 
-    settings->setLockAzimuthWhilePanning(false);
-    settings->setScrollSensitivity(1.5);
-    settings->setThrowingEnabled(true);
-    settings->setThrowDecayRate(0.02);
-    settings->setMinMaxDistance(1'000'000.0, 100'000'000.0);
-    settings->setArcViewpointTransitions(true);
-    settings->setAutoViewpointDurationEnabled(true);
-    settings->setAutoViewpointDurationLimits(0.0, 0.5);
+    viewer.addEventHandler(manipulatorController);
+
+    osgEarth::EarthManipulator::Settings* settings0 = manipulator0->getSettings();
+
+    settings0->setLockAzimuthWhilePanning(false);
+    settings0->setScrollSensitivity(1.5);
+    settings0->setThrowingEnabled(true);
+    settings0->setThrowDecayRate(0.02);
+    settings0->setMinMaxDistance(1'000'000.0, 100'000'000.0);
+    settings0->setArcViewpointTransitions(true);
+    settings0->setAutoViewpointDurationEnabled(true);
+    settings0->setAutoViewpointDurationLimits(0.0, 0.5);
 
     root->addEventCallback(new osg::NodeCallback());
 

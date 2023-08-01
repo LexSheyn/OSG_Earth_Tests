@@ -55,7 +55,7 @@ int32_t main(int32_t argc, char** argv)
     osg::ref_ptr<osgGA::TrackballManipulator> trackballManipulator = new osgGA::TrackballManipulator();
     osg::ref_ptr<osgGA::NodeTrackerManipulator> nodeTrackerManipulator = new osgGA::NodeTrackerManipulator();
 
-    nodeTrackerManipulator->setHomePosition(osg::Vec3(0.0f, 200.0f, 0.0f), osg::Vec3(), osg::Vec3(0.0,0.0,1.0));
+    //nodeTrackerManipulator->setHomePosition(osg::Vec3(1000.0f, 0.0f, 0.0f), osg::Vec3(), osg::Vec3(0.0, 1.0, 0.0));
     nodeTrackerManipulator->setTrackerMode(osgGA::NodeTrackerManipulator::NODE_CENTER_AND_ROTATION);
     nodeTrackerManipulator->setRotationMode(osgGA::NodeTrackerManipulator::TRACKBALL);
     nodeTrackerManipulator->setTrackNode(model);
